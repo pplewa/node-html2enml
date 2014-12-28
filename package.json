@@ -2,7 +2,7 @@
   "author": "mahadevan k",
   "name": "html2enml2",
   "description": "HTML to ENML convertor for Node.JS",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "license": "GPLv3",
   "repository": {
     "url": "https://github.com/flotemaha/node-html2enml.git"
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "evernote": "^1.25.3",
+    "spark-md5": "0.0.5",
     "xhr2": ">=0.0.7",
     "xmldom": ">=0.1.19"
   },
