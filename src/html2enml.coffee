@@ -5,6 +5,9 @@ async = require 'async'
 parser = new DOMParser
 serializer = new XMLSerializer
 
+# Helper to check the head of our URL strings
+String::startsWith ?= (s) -> @[...s.length] is s
+
 enmlProhibitedTags = [
   "applet",
   "base",
@@ -82,19 +85,22 @@ _convertMedia = (element, url, callback) ->
   request.send null
 
 _adjustUrl = (relative, base) ->
-    stack = base.split '/'
-    parts = relative.split '/'
-    stack.pop()
+  if relative.startsWith 'http:' or relative.startsWith 'https:' or relative.startsWith 'file:' or relative.startsWith 'evernote:'
+    return relative
 
-    for part in parts
-      if part is '.'
-        continue
-      if part is '..'
-        stack.pop()
-      else
-        stack.push(part)
+  stack = base.split '/'
+  parts = relative.split '/'
+  stack.pop()
 
-    stack.join '/'
+  for part in parts
+    if part is '.'
+      continue
+    if part is '..'
+      stack.pop()
+    else
+      stack.push(part)
+
+  stack.join '/'
 
 _convertNodes = (domNode, baseUrl, callback) ->
   tagName = if domNode.tagName then domNode.tagName.toLowerCase() else ''
