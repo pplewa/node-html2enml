@@ -3,6 +3,7 @@ XMLHttpRequest = require 'xhr2'
 async = require 'async'
 Evernote = require('evernote').Evernote
 SparkMD5 = require 'spark-md5'
+fs = require 'fs'
 parser = new DOMParser
 serializer = new XMLSerializer
 
@@ -62,6 +63,13 @@ enmlProhibitedAttributes = [
 requests = []
 resources = []
 
+_toArrayBuffer = (buffer) ->
+  ab = new ArrayBuffer buffer.length
+  view = new Uint8Array ab
+  for unit, i in buffer
+    view[i] = unit
+  return ab
+
 _convertMedia = (element, url, callback) ->
   request = new XMLHttpRequest
   request.element = element
@@ -94,8 +102,17 @@ _convertMedia = (element, url, callback) ->
     if requests.length is 0
       callback()
 
-  requests.push request
-  request.send null
+  if url.indexOf 'http' is -1
+    request.onload
+      target:
+        status: 200
+        response: toArrayBuffer fs.readFileSync url
+        element: element
+        getResponseHeader: () ->
+          'image/png'
+  else
+    requests.push request
+    request.send null
 
 _adjustUrl = (relative, base) ->
   if relative.startsWith 'http:' or relative.startsWith 'https:' or relative.startsWith 'file:' or relative.startsWith 'evernote:'
