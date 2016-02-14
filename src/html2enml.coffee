@@ -1,10 +1,10 @@
 {DOMParser, XMLSerializer} = require 'xmldom'
 XMLHttpRequest = require 'xhr2'
-md5 = require 'md5'
 async = require 'async'
+Evernote = require('evernote').Evernote
+SparkMD5 = require 'spark-md5'
 parser = new DOMParser
 serializer = new XMLSerializer
-Evernote = require('evernote').Evernote
 
 # Helper to check the head of our URL strings
 String::startsWith ?= (s) -> @[...s.length] is s
@@ -66,11 +66,14 @@ _convertMedia = (element, url, callback) ->
   request = new XMLHttpRequest
   request.element = element
   request.open 'GET', url, true
+  request.responseType = 'arraybuffer'
 
   request.onload = (e) ->
     response = e.target
     if response.status is 200
-      hash = md5 response.response
+      spark = new SparkMD5.ArrayBuffer
+      spark.append response.response
+      hash = spark.end
       mime = response.getResponseHeader 'content-type'
       response.element.tagName = 'en-media'
       response.element.setAttribute 'hash', hash
