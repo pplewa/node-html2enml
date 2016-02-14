@@ -16,13 +16,13 @@ Call html2enml from a node.js script as follows:
         // the htmldata variable should contain HTML string
         // base_uri contains uri to be prepended to convert relative URLs to absolute URLs
         // base_uri can be an empty string if base url is unknown
-        html2enml(htmldata, base_uri, function(err, enml) {
+        html2enml(htmldata, base_uri, function(err, enml, resources) {
           if (err) {
             // handle conversion error
             console.error(err);
           } else {
             // Your ENML string:
-            console.log(enml);
+            console.log(enml, resources);
           }
         }) ;
 

@@ -4,6 +4,7 @@ md5 = require 'md5'
 async = require 'async'
 parser = new DOMParser
 serializer = new XMLSerializer
+Evernote = require('evernote').Evernote
 
 # Helper to check the head of our URL strings
 String::startsWith ?= (s) -> @[...s.length] is s
@@ -59,6 +60,7 @@ enmlProhibitedAttributes = [
 ]
 
 requests = []
+resources = []
 
 _convertMedia = (element, url, callback) ->
   request = new XMLHttpRequest
@@ -69,10 +71,18 @@ _convertMedia = (element, url, callback) ->
     response = e.target
     if response.status is 200
       hash = md5 response.response
+      mime = response.getResponseHeader 'content-type'
       response.element.tagName = 'en-media'
       response.element.setAttribute 'hash', hash
-      response.element.setAttribute 'type', response.getResponseHeader('content-type')
-      str = new XMLSerializer.serializeToString response.element
+      response.element.setAttribute 'type', mime
+      str = serializer.serializeToString response.element
+      response.element.removeAttribute 'src'
+      resource = new Evernote.Resource
+        mime: mime
+      resource.data = new Evernote.Data
+      resource.data.body = response.response
+      resource.data.bodyHash = hash
+      resources.push resource
 
     for request, i in requests
       if request is response
@@ -158,4 +168,4 @@ module.exports = htmlToEnml = (htmlString, baseUrl, callback) ->
     if errors.length
       callback(new Error('Failed to parse'))
     else
-      callback null, enml
+      callback null, enml, resources

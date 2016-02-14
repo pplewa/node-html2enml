@@ -4,12 +4,12 @@ html2enml=require('../lib/html2enml') ;
 
 if(process.argv.length>2) {
 	fs.readFile(process.argv[2], 'utf8', function(error, data) {
-		html2enml(data, "http://radioflote.com", function(err, enml) {
+		html2enml(data, "http://radioflote.com", function(err, enml, resources) {
 			if (err) {
 				console.error(err);
 			} else {
 				console.log("Looks like things went fine!") ;
-				console.log(enml) ;
+				console.log(enml, resources) ;
 			}
 		}) ;
 
