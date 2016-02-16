@@ -9,7 +9,7 @@ lib/%.js: src/%.coffee
 	@$(BIN)/coffee -bcp $< > $@
 
 test: build
-	@$(BIN)/mocha -b specs
+	@$(BIN)/mocha --compilers coffee:coffee-script/register -b test
 
 clean:
 	@rm -f $(LIB)
