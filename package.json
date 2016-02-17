@@ -17,9 +17,10 @@
   "dependencies": {
     "async": "^1.5.2",
     "evernote": "^1.25.82",
+    "mime": "^1.3.4",
     "spark-md5": "^2.0.0",
-    "xhr2": ">=0.0.7",
-    "xmldom": ">=0.1.19"
+    "xmldom": ">=0.1.19",
+    "xmlhttprequest": "^1.8.0"
   },
   "devDependencies": {
     "coffee-script": ">= 1.3",

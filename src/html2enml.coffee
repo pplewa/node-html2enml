@@ -1,6 +1,7 @@
 fs = require 'fs'
 async = require 'async'
-XMLHttpRequest = require 'xhr2'
+mime = require 'mime'
+XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest
 SparkMD5 = require 'spark-md5'
 {DOMParser, XMLSerializer} = require 'xmldom'
 Evernote = require('evernote').Evernote
@@ -25,7 +26,7 @@ PROHIBITEDATTR = [
 
 class htmlEnmlConverter
   constructor: ->
-    @requests = []
+    # @requests = []
     @resources = []
     @parser = new DOMParser
     @serializer = new XMLSerializer
@@ -42,66 +43,120 @@ class htmlEnmlConverter
       testdoc = @parser.parseFromString enml
       errors = testdoc.getElementsByTagName 'parsererror'
 
+      resources = @resources.map (e) ->
+        e.resource
+
       if errors.length
         callback(new Error('Failed to parse'))
       else
-        callback null, enml, @resources
+        callback null, enml, resources
 
   # TODO: Check if inbuilt function covers this
-  _toArrayBuffer: (buffer) ->
-    ab = new ArrayBuffer buffer.length
-    view = new Uint8Array ab
-    for unit, i in buffer
-      view[i] = unit
-    return ab
+  # _toArrayBuffer: (buffer) ->
+  #   ab = new ArrayBuffer buffer.length
+  #   view = new Uint8Array ab
+  #   for unit, i in buffer
+  #     view[i] = unit
+  #   return ab
+
+  _convertMedia: (element, url, callback) ->
+    # Test if resource already loaded
+    resource = @resources.find (resource) ->
+      resource.url is url
+
+    if resource
+      element.tagName = 'en-media'
+      element.setAttribute 'hash', resource.hash
+      element.setAttribute 'type', resource.mime
+      element.removeAttribute 'src'
+      callback()
+
+    # Resource not present: Send new request
+    xhr = new XMLHttpRequest
+    xhr.element = element
+    xhr.responseType = 'arraybuffer'
+    _this = this
+    xhr.onreadystatechange = ->
+      if @readyState is 4
+        if @status is 200
+          spark = new SparkMD5.ArrayBuffer
+          spark.append @responseText
+          hash = spark.end()
+          mimeType = @getResponseHeader('content-type') or mime.lookup url
+
+          # Create new Evernote resource
+          resource = new Evernote.Resource
+            mime: mimeType
+          resource.data = new Evernote.Data
+          resource.data.body = @responseText
+          resource.data.bodyHash = hash
+
+          # Prepare ENML element
+          @element.tagName = 'en-media'
+          @element.setAttribute 'hash', hash
+          @element.setAttribute 'type', mimeType
+          @element.removeAttribute 'src'
+
+          _this.resources.push
+            url: url
+            hash: hash
+            mime: mimeType
+            resource: resource
+
+          callback()
+        else
+          callback()
+    xhr.open 'GET', url
+    xhr.send()
 
   # TODO: Rewrite this from scratch
-  _convertMedia: (element, url, callback) ->
-    request = new XMLHttpRequest
-    request.element = element
-    request.open 'GET', url, true
-    request.responseType = 'arraybuffer'
+  # _convertMedia: (element, url, callback) ->
+  #   request = new XMLHttpRequest
+  #   request.element = element
+  #   request.open 'GET', url, true
+  #   request.responseType = 'arraybuffer'
+  #
+  #   request.onload = (e) =>
+  #     response = e.target
+  #     console.log 'RECEIVED'
+  #     console.log 'status:', response.status
+  #     if response.status is 200
+  #       spark = new SparkMD5.ArrayBuffer
+  #       spark.append response.response
+  #       hash = spark.end
+  #       mime = response.getResponseHeader 'content-type'
+  #       response.element.tagName = 'en-media'
+  #       response.element.setAttribute 'hash', hash
+  #       response.element.setAttribute 'type', mime
+  #       str = @serializer.serializeToString response.element
+  #       response.element.removeAttribute 'src'
+  #       resource = new Evernote.Resource
+  #         mime: mime
+  #       resource.data = new Evernote.Data
+  #       resource.data.body = response.response
+  #       resource.data.bodyHash = hash
+  #       @resources.push resource
+  #
+  #     for request, i in @requests
+  #       if request is response
+  #         @requests.splice i, 1
+  #
+  #     if @requests.length is 0
+  #       callback()
+  #   console.log 'SENDING'
+  #   @requests.push request
+  #   request.send()
 
-    request.onload = (e) =>
-      response = e.target
-      console.log request
-      console.log response
-      if response.status is 200
-        spark = new SparkMD5.ArrayBuffer
-        spark.append response.response
-        hash = spark.end
-        mime = response.getResponseHeader 'content-type'
-        response.element.tagName = 'en-media'
-        response.element.setAttribute 'hash', hash
-        response.element.setAttribute 'type', mime
-        str = @serializer.serializeToString response.element
-        response.element.removeAttribute 'src'
-        resource = new Evernote.Resource
-          mime: mime
-        resource.data = new Evernote.Data
-        resource.data.body = response.response
-        resource.data.bodyHash = hash
-        @resources.push resource
-
-      for request, i in @requests
-        if request is response
-          @requests.splice i, 1
-
-      if @requests.length is 0
-        callback()
-
-    if url.indexOf 'http' is -1
-      fileExists = fs.existsSync url
-      request.onload
-        target:
-          status: if fileExists then 200 else 404
-          response: if fileExists then @_toArrayBuffer fs.readFileSync url else null
-          element: element
-          getResponseHeader: ->
-            'image/png'
-    else
-      @requests.push request
-      request.send()
+    # if url.indexOf 'http' is -1
+    #   fileExists = fs.existsSync url
+    #   request.onload
+    #     target:
+    #       status: if fileExists then 200 else 404
+    #       response: if fileExists then @_toArrayBuffer fs.readFileSync url else null
+    #       element: element
+    #       getResponseHeader: ->
+    #         'image/png'
+    # else
 
   _adjustUrl: (relative, base) ->
     if relative.startsWith('http:') or relative.startsWith('https:') or relative.startsWith('file:') or relative.startsWith('evernote:')
