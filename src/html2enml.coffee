@@ -26,7 +26,6 @@ PROHIBITEDATTR = [
 
 class htmlEnmlConverter
   constructor: ->
-    # @requests = []
     @resources = []
     @parser = new DOMParser
     @serializer = new XMLSerializer
@@ -51,14 +50,6 @@ class htmlEnmlConverter
       else
         callback null, enml, resources
 
-  # TODO: Check if inbuilt function covers this
-  # _toArrayBuffer: (buffer) ->
-  #   ab = new ArrayBuffer buffer.length
-  #   view = new Uint8Array ab
-  #   for unit, i in buffer
-  #     view[i] = unit
-  #   return ab
-
   _convertMedia: (element, url, callback) ->
     # Test if resource already loaded
     resource = @resources.find (resource) ->
@@ -69,7 +60,7 @@ class htmlEnmlConverter
       element.setAttribute 'hash', resource.hash
       element.setAttribute 'type', resource.mime
       element.removeAttribute 'src'
-      callback()
+      return callback()
 
     # Resource not present: Send new request
     xhr = new XMLHttpRequest
@@ -79,10 +70,17 @@ class htmlEnmlConverter
     xhr.onreadystatechange = ->
       if @readyState is 4
         if @status is 200
+          # Identify mime type
+          mimeType = @getResponseHeader('content-type') or mime.lookup url
+          # TODO: Only accept certain file types
+          if !mimeType
+            # TODO: Handle error here: Mime type could not be identified
+            return callback()
+
+          # Create file hash
           spark = new SparkMD5.ArrayBuffer
           spark.append @responseText
           hash = spark.end()
-          mimeType = @getResponseHeader('content-type') or mime.lookup url
 
           # Create new Evernote resource
           resource = new Evernote.Resource
@@ -97,66 +95,18 @@ class htmlEnmlConverter
           @element.setAttribute 'type', mimeType
           @element.removeAttribute 'src'
 
+          # Add resource to resource lookup table
           _this.resources.push
             url: url
             hash: hash
             mime: mimeType
             resource: resource
-
           callback()
         else
+          # TODO: Handle case when resource not found here
           callback()
     xhr.open 'GET', url
     xhr.send()
-
-  # TODO: Rewrite this from scratch
-  # _convertMedia: (element, url, callback) ->
-  #   request = new XMLHttpRequest
-  #   request.element = element
-  #   request.open 'GET', url, true
-  #   request.responseType = 'arraybuffer'
-  #
-  #   request.onload = (e) =>
-  #     response = e.target
-  #     console.log 'RECEIVED'
-  #     console.log 'status:', response.status
-  #     if response.status is 200
-  #       spark = new SparkMD5.ArrayBuffer
-  #       spark.append response.response
-  #       hash = spark.end
-  #       mime = response.getResponseHeader 'content-type'
-  #       response.element.tagName = 'en-media'
-  #       response.element.setAttribute 'hash', hash
-  #       response.element.setAttribute 'type', mime
-  #       str = @serializer.serializeToString response.element
-  #       response.element.removeAttribute 'src'
-  #       resource = new Evernote.Resource
-  #         mime: mime
-  #       resource.data = new Evernote.Data
-  #       resource.data.body = response.response
-  #       resource.data.bodyHash = hash
-  #       @resources.push resource
-  #
-  #     for request, i in @requests
-  #       if request is response
-  #         @requests.splice i, 1
-  #
-  #     if @requests.length is 0
-  #       callback()
-  #   console.log 'SENDING'
-  #   @requests.push request
-  #   request.send()
-
-    # if url.indexOf 'http' is -1
-    #   fileExists = fs.existsSync url
-    #   request.onload
-    #     target:
-    #       status: if fileExists then 200 else 404
-    #       response: if fileExists then @_toArrayBuffer fs.readFileSync url else null
-    #       element: element
-    #       getResponseHeader: ->
-    #         'image/png'
-    # else
 
   _adjustUrl: (relative, base) ->
     if relative.startsWith('http:') or relative.startsWith('https:') or relative.startsWith('file:') or relative.startsWith('evernote:')
@@ -179,20 +129,24 @@ class htmlEnmlConverter
   _convertNodes: (domNode, baseUrl, callback) ->
     tagName = if domNode.tagName then domNode.tagName.toLowerCase() else ''
 
+    # Discard element if not permitted in ENML
     if tagName in PROHIBITEDTAGS
       domNode.parentNode.removeChild domNode
       callback()
     else if domNode.attributes or domNode.childNodes
       async.parallel [
         (callback) =>
+          # Handle element attributes
           unless domNode.attributes
             return callback()
           async.each domNode.attributes, (attribute, callback) =>
               attributeName = attribute.name.toLowerCase()
               if attributeName in PROHIBITEDATTR
+                # Discard attribute since not allowed in ENML
                 domNode.attributes.removeNamedItem attribute.name
                 callback()
               else if attributeName is 'href' and tagName is 'a'
+                # Convert relative links to absolute links
                 attribute.value = @_adjustUrl attribute.value, baseUrl
                 if !attribute.value
                   domNode.attributes.removeNamedItem attribute.name
@@ -203,14 +157,17 @@ class htmlEnmlConverter
                   domNode.parentNode.removeChild domNode
                   callback()
                 else
+                  # Convert images to Evernote resources
                   @_convertMedia domNode, attribute.value, callback
               else
                 callback()
             , callback
         (callback) =>
+          # Handle element children
           unless domNode.childNodes
             return callback()
           async.each domNode.childNodes, (childNode, callback) =>
+              # Recursively convert children
               @_convertNodes childNode, baseUrl, callback
             , callback
         ], callback
@@ -222,6 +179,7 @@ module.exports.fromString = (htmlString, baseUrl, callback) ->
   new htmlEnmlConverter().convert htmlString, baseUrl, callback
 
 module.exports.fromFile = (file, baseUrl, callback) ->
+  # Read file to string
   fs.readFile file, 'utf8', (err, htmlString) ->
     if err
       callback err
