@@ -13,10 +13,19 @@ Install html2enml via npm:
 Call html2enml from a node.js script as follows:
 
         var html2enml = require('html2enml');
-        // the htmldata variable should contain HTML string
-        // base_uri contains uri to be prepended to convert relative URLs to absolute URLs
-        // base_uri can be an empty string if base url is unknown
-        html2enml.fromString(htmlString, base_uri, function(err, enml, resources) {
+
+        options = {
+          baseUrl: 'http://www.google.com', // Base url for relative URLs,
+                                            //     default is ''.
+          strict: true                      // In strict mode, converter returns
+                                            //     error when encountering invalid
+                                            //     resources or invalid HTML tags.
+                                            //     When strict is set to false,
+                                            //     it discards invalid elements.
+                                            //     Default is false.
+        }
+
+        html2enml.fromString(htmlString, options, function(err, enml, resources) {
           if (err) {
             // handle conversion error
             console.error(err);
@@ -26,7 +35,7 @@ Call html2enml from a node.js script as follows:
           }
         }) ;
 
-        html2enml.fromFile('path/to/your/file.html', base_uri, function(err, enml, resources) {
+        html2enml.fromFile('path/to/your/file.html', options, function(err, enml, resources) {
           if (err) {
             // handle conversion error
             console.error(err);

@@ -1,6 +1,7 @@
 fs = require 'fs'
 async = require 'async'
 mime = require 'mime'
+mime.default_type = ''
 XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest
 SparkMD5 = require 'spark-md5'
 {DOMParser, XMLSerializer} = require 'xmldom'
@@ -11,44 +12,107 @@ String::startsWith ?= (s) -> @[...s.length] is s
 
 NOTEHEADER = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
 
-PROHIBITEDTAGS = [
-  "applet", "base", "basefont", "bgsound", "blink", "button", "dir", "embed",
-  "fieldset", "form", "frame", "frameset", "head", "iframe", "ilayer", "input",
-  "isindex", "label", "layer", "legend", "link", "marquee", "menu", "meta",
-  "noframes", "noscript", "object", "optgroup", "option", "param", "plaintext",
-  "script", "select", "style", "textarea", "xml"
+PERMITTEDELEMENTS = [
+  'a', 'abbr', 'acronym', 'address', 'area', 'b', 'bdo', 'big', 'blockquote',
+  'br', 'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'dd', 'del',
+  'dfn', 'div', 'dl', 'dt', 'em', 'font', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'hr', 'i', 'img', 'ins', 'kbd', 'li', 'map', 'ol', 'p', 'pre', 'q', 's',
+  'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'table', 'tbody',
+  'td', 'tfoot', 'th', 'thead', 'title', 'tr', 'tt', 'u', 'ul', 'var', 'xmp'
 ]
 
 PROHIBITEDATTR = [
-  "id", "class", "onclick", "ondblclick", "accesskey", "data", "dynsrc",
-  "tabindex"
+  'id', 'class', 'onclick', 'ondblclick', 'on', 'accesskey', 'data', 'dynsrc',
+  'tabindex'
 ]
 
+# PERMITTEDURLS = [
+#   'http', 'https', 'file'
+# ]
+
 class htmlEnmlConverter
-  constructor: ->
+
+  constructor: (options) ->
+    @baseUrl = options.baseUrl or ''
+    @strict = options.strict or false
     @resources = []
     @parser = new DOMParser
     @serializer = new XMLSerializer
 
-  convert: (htmlString, baseUrl, callback) ->
+  convert: (htmlString, callback) ->
     doc = @parser.parseFromString(htmlString, 'text/html')
-    @_convertNodes doc, baseUrl, (err) =>
-      doc = doc.getElementsByTagName('body')[0]
-      doc.tagName = 'en-note'
-
+    doc = doc.getElementsByTagName('body')[0]
+    @_convertBody doc, (err) =>
+      if err
+        return callback err
       enml = NOTEHEADER + @serializer.serializeToString doc
-
-      # TODO: improve error checking (not by reparsing!)
-      testdoc = @parser.parseFromString enml
-      errors = testdoc.getElementsByTagName 'parsererror'
-
       resources = @resources.map (e) ->
         e.resource
 
-      if errors.length
-        callback(new Error('Failed to parse'))
-      else
-        callback null, enml, resources
+      callback null, enml, resources
+
+  _convertBody: (domNode, callback) ->
+    domNode.tagName = 'en-note'
+
+    async.series [
+      (callback) =>
+        async.each domNode.attributes, (attribute, callback) =>
+            attributeName = attribute.name.toLowerCase()
+            if attributeName in PROHIBITEDATTR
+              # Discard attribute since not allowed in ENML
+              domNode.attributes.removeNamedItem attribute.name
+              callback()
+          , callback
+      (callback) =>
+        # Handle element children
+        async.each domNode.childNodes, (childNode, callback) =>
+            # Recursively convert children
+            @_convertNodes childNode, callback
+          , callback
+    ], callback
+
+  _convertNodes: (domNode, callback) ->
+    tagName = if domNode.tagName then domNode.tagName.toLowerCase() else ''
+
+    if domNode.nodeName isnt '#text' and tagName not in PERMITTEDELEMENTS
+      # Discard element if not permitted in ENML
+      domNode.parentNode.removeChild domNode
+      err = if @strict then new Error('Illegal element.') else null
+      return callback(err)
+
+    async.parallel [
+      (callback) =>
+        # Handle element attributes
+        async.each domNode.attributes, (attribute, callback) =>
+            attributeName = attribute.name.toLowerCase()
+            if attributeName in PROHIBITEDATTR
+              # Discard attribute since not allowed in ENML
+              domNode.attributes.removeNamedItem attribute.name
+              callback()
+            else if attributeName is 'href' and tagName is 'a'
+              # Convert relative links to absolute links
+              attribute.value = @_adjustUrl attribute.value
+              if !attribute.value
+                domNode.attributes.removeNamedItem attribute.name
+              callback()
+            else if attributeName is 'src' and tagName is 'img'
+              attribute.value = @_adjustUrl attribute.value
+              if !attribute.value
+                domNode.parentNode.removeChild domNode
+                callback()
+              else
+                # Convert images to Evernote resources
+                @_convertMedia domNode, attribute.value, callback
+            else
+              callback()
+          , callback
+      (callback) =>
+        # Handle element children
+        async.each domNode.childNodes, (childNode, callback) =>
+            # Recursively convert children
+            @_convertNodes childNode, callback
+          , callback
+      ], callback
 
   _convertMedia: (element, url, callback) ->
     # Test if resource already loaded
@@ -74,6 +138,7 @@ class htmlEnmlConverter
           mimeType = @getResponseHeader('content-type') or mime.lookup url
           # TODO: Only accept certain file types
           if !mimeType
+            # Mime type will be empty if it cannot be identified
             # TODO: Handle error here: Mime type could not be identified
             return callback()
 
@@ -108,14 +173,12 @@ class htmlEnmlConverter
     xhr.open 'GET', url
     xhr.send()
 
-  _adjustUrl: (relative, base) ->
+  _adjustUrl: (relative) ->
     if relative.startsWith('http:') or relative.startsWith('https:') or relative.startsWith('file:') or relative.startsWith('evernote:')
       return relative
-
-    stack = base.split '/'
+    stack = @baseUrl.split '/'
     parts = relative.split '/'
     stack.pop()
-
     for part in parts
       if part is '.'
         continue
@@ -123,64 +186,14 @@ class htmlEnmlConverter
         stack.pop()
       else
         stack.push(part)
-
     stack.join '/'
 
-  _convertNodes: (domNode, baseUrl, callback) ->
-    tagName = if domNode.tagName then domNode.tagName.toLowerCase() else ''
+module.exports.fromString = (htmlString, options, callback) ->
+  new htmlEnmlConverter(options).convert htmlString, callback
 
-    # Discard element if not permitted in ENML
-    if tagName in PROHIBITEDTAGS
-      domNode.parentNode.removeChild domNode
-      callback()
-    else if domNode.attributes or domNode.childNodes
-      async.parallel [
-        (callback) =>
-          # Handle element attributes
-          unless domNode.attributes
-            return callback()
-          async.each domNode.attributes, (attribute, callback) =>
-              attributeName = attribute.name.toLowerCase()
-              if attributeName in PROHIBITEDATTR
-                # Discard attribute since not allowed in ENML
-                domNode.attributes.removeNamedItem attribute.name
-                callback()
-              else if attributeName is 'href' and tagName is 'a'
-                # Convert relative links to absolute links
-                attribute.value = @_adjustUrl attribute.value, baseUrl
-                if !attribute.value
-                  domNode.attributes.removeNamedItem attribute.name
-                callback()
-              else if attributeName is 'src' and tagName is 'img'
-                attribute.value = @_adjustUrl attribute.value, baseUrl
-                if !attribute.value
-                  domNode.parentNode.removeChild domNode
-                  callback()
-                else
-                  # Convert images to Evernote resources
-                  @_convertMedia domNode, attribute.value, callback
-              else
-                callback()
-            , callback
-        (callback) =>
-          # Handle element children
-          unless domNode.childNodes
-            return callback()
-          async.each domNode.childNodes, (childNode, callback) =>
-              # Recursively convert children
-              @_convertNodes childNode, baseUrl, callback
-            , callback
-        ], callback
-    else
-      callback()
-
-
-module.exports.fromString = (htmlString, baseUrl, callback) ->
-  new htmlEnmlConverter().convert htmlString, baseUrl, callback
-
-module.exports.fromFile = (file, baseUrl, callback) ->
+module.exports.fromFile = (file, options, callback) ->
   # Read file to string
   fs.readFile file, 'utf8', (err, htmlString) ->
     if err
       callback err
-    new htmlEnmlConverter().convert htmlString, baseUrl, callback
+    new htmlEnmlConverter(options).convert htmlString, callback
