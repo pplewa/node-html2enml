@@ -4,15 +4,18 @@ mime = require 'mime'
 mime.default_type = ''
 XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest
 SparkMD5 = require 'spark-md5'
-{DOMParser, XMLSerializer} = require 'xmldom'
+{DOMParser, NodeType, XMLSerializer} = require 'xmldom'
 Evernote = require('evernote').Evernote
 
 # Helper to check the head of our URL strings
 String::startsWith ?= (s) -> @[...s.length] is s
+String::startsWithAny ?= (s) ->
+  (return true if @startsWith x) for x in s
+  return false
 
-NOTEHEADER = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
+NOTE_HEADER = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
 
-PERMITTEDELEMENTS = [
+PERMITTED_ELEMENTS = [
   'a', 'abbr', 'acronym', 'address', 'area', 'b', 'bdo', 'big', 'blockquote',
   'br', 'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'dd', 'del',
   'dfn', 'div', 'dl', 'dt', 'em', 'font', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -21,20 +24,37 @@ PERMITTEDELEMENTS = [
   'td', 'tfoot', 'th', 'thead', 'title', 'tr', 'tt', 'u', 'ul', 'var', 'xmp'
 ]
 
-PROHIBITEDATTR = [
+PROHIBITED_ATTR = [
   'id', 'class', 'onclick', 'ondblclick', 'on', 'accesskey', 'data', 'dynsrc',
   'tabindex'
 ]
 
-# PERMITTEDURLS = [
-#   'http', 'https', 'file'
-# ]
+# Node types as given in xmldom
+NodeType = {}
+ELEMENT_NODE                = NodeType.ELEMENT_NODE                = 1
+ATTRIBUTE_NODE              = NodeType.ATTRIBUTE_NODE              = 2
+TEXT_NODE                   = NodeType.TEXT_NODE                   = 3
+CDATA_SECTION_NODE          = NodeType.CDATA_SECTION_NODE          = 4
+ENTITY_REFERENCE_NODE       = NodeType.ENTITY_REFERENCE_NODE       = 5
+ENTITY_NODE                 = NodeType.ENTITY_NODE                 = 6
+PROCESSING_INSTRUCTION_NODE = NodeType.PROCESSING_INSTRUCTION_NODE = 7
+COMMENT_NODE                = NodeType.COMMENT_NODE                = 8
+DOCUMENT_NODE               = NodeType.DOCUMENT_NODE               = 9
+DOCUMENT_TYPE_NODE          = NodeType.DOCUMENT_TYPE_NODE          = 10
+DOCUMENT_FRAGMENT_NODE      = NodeType.DOCUMENT_FRAGMENT_NODE      = 11
+NOTATION_NODE               = NodeType.NOTATION_NODE               = 12
+
+PERMITTED_URLS = [
+  'http', 'https', 'file', 'evernote'
+]
 
 class htmlEnmlConverter
 
   constructor: (options) ->
     @baseUrl = options.baseUrl or ''
     @strict = options.strict or false
+    @includeComments = options.includeComments or false
+    @ignoreFiles = options.ignoreFiles or false
     @resources = []
     @parser = new DOMParser
     @serializer = new XMLSerializer
@@ -45,7 +65,7 @@ class htmlEnmlConverter
     @_convertBody doc, (err) =>
       if err
         return callback err
-      enml = NOTEHEADER + @serializer.serializeToString doc
+      enml = NOTE_HEADER + @serializer.serializeToString doc
       resources = @resources.map (e) ->
         e.resource
 
@@ -58,7 +78,7 @@ class htmlEnmlConverter
       (callback) =>
         async.each domNode.attributes, (attribute, callback) =>
             attributeName = attribute.name.toLowerCase()
-            if attributeName in PROHIBITEDATTR
+            if attributeName in PROHIBITED_ATTR
               # Discard attribute since not allowed in ENML
               domNode.attributes.removeNamedItem attribute.name
               callback()
@@ -67,14 +87,30 @@ class htmlEnmlConverter
         # Handle element children
         async.each domNode.childNodes, (childNode, callback) =>
             # Recursively convert children
-            @_convertNodes childNode, callback
+            @_convertNode childNode, callback
           , callback
     ], callback
 
-  _convertNodes: (domNode, callback) ->
-    tagName = if domNode.tagName then domNode.tagName.toLowerCase() else ''
+  _convertNode: (domNode, callback) ->
+    # We only need to process element nodes:
+    # unless domNode.nodeType is ELEMENT_NODE
+    #   return callback()
+    switch domNode.nodeType
+      when ELEMENT_NODE
+        @_convertElementNode domNode, callback
+      when TEXT_NODE
+        callback()
+      when COMMENT_NODE
+        if not @includeComments
+          domNode.parentNode.removeChild domNode
+        callback()
+      else
+        domNode.parentNode.removeChild domNode
+        callback()
 
-    if domNode.nodeName isnt '#text' and tagName not in PERMITTEDELEMENTS
+  _convertElementNode: (domNode, callback) ->
+    tagName = if domNode.tagName then domNode.tagName.toLowerCase() else ''
+    if tagName not in PERMITTED_ELEMENTS
       # Discard element if not permitted in ENML
       domNode.parentNode.removeChild domNode
       err = if @strict then new Error('Illegal element.') else null
@@ -85,7 +121,7 @@ class htmlEnmlConverter
         # Handle element attributes
         async.each domNode.attributes, (attribute, callback) =>
             attributeName = attribute.name.toLowerCase()
-            if attributeName in PROHIBITEDATTR
+            if attributeName in PROHIBITED_ATTR
               # Discard attribute since not allowed in ENML
               domNode.attributes.removeNamedItem attribute.name
               callback()
@@ -96,6 +132,9 @@ class htmlEnmlConverter
                 domNode.attributes.removeNamedItem attribute.name
               callback()
             else if attributeName is 'src' and tagName is 'img'
+              if @ignoreFiles
+                domNode.parentNode.removeChild domNode
+                callback()
               attribute.value = @_adjustUrl attribute.value
               if !attribute.value
                 domNode.parentNode.removeChild domNode
@@ -110,7 +149,7 @@ class htmlEnmlConverter
         # Handle element children
         async.each domNode.childNodes, (childNode, callback) =>
             # Recursively convert children
-            @_convertNodes childNode, callback
+            @_convertNode childNode, callback
           , callback
       ], callback
 
@@ -174,7 +213,7 @@ class htmlEnmlConverter
     xhr.send()
 
   _adjustUrl: (relative) ->
-    if relative.startsWith('http:') or relative.startsWith('https:') or relative.startsWith('file:') or relative.startsWith('evernote:')
+    if relative.startsWithAny(PERMITTED_URLS)
       return relative
     stack = @baseUrl.split '/'
     parts = relative.split '/'

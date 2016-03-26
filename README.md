@@ -17,12 +17,13 @@ Call html2enml from a node.js script as follows:
         options = {
           baseUrl: 'http://www.google.com', // Base url for relative URLs,
                                             //     default is ''.
-          strict: true                      // In strict mode, converter returns
+          strict: true,                     // In strict mode, converter returns
                                             //     error when encountering invalid
                                             //     resources or invalid HTML tags.
                                             //     When strict is set to false,
                                             //     it discards invalid elements.
                                             //     Default is false.
+          includeComments: false            // Default is false
         }
 
         html2enml.fromString(htmlString, options, function(err, enml, resources) {
