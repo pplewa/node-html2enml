@@ -1,16 +1,16 @@
-# node-html2enml #
+# node-htmltoenml #
 
-node-html2enml is a node.js module to convert HTML to ENML (Evernote Markup Language).
+node-htmltoenml is a node.js module to convert HTML to ENML (Evernote Markup Language).
 
-Unlike other implementations, html2enml parses the DOM tree of the HTML document and converts it to valid ENML, which results in a robust and reliable conversion
+Unlike other implementations, htmltoenml parses the DOM tree of the HTML document and converts it to valid ENML, which results in a robust and reliable conversion
 
 ## Usage ##
 
-Install html2enml via npm:
+Install htmltoenml via npm:
 
-        npm install html2enml
+        npm install htmltoenml
 
-Call html2enml from a node.js script as follows:
+Call htmltoenml from a node.js script as follows:
 
         var htmltoenml = require('htmltoenml');
 
