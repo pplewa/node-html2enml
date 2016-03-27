@@ -158,6 +158,7 @@ class htmlEnmlConverter
     resource = @resources.find (resource) ->
       resource.url is url
 
+    # Resource already present
     if resource
       element.tagName = 'en-media'
       element.setAttribute 'hash', resource.hash
@@ -175,11 +176,15 @@ class htmlEnmlConverter
         if @status is 200
           # Identify mime type
           mimeType = @getResponseHeader('content-type') or mime.lookup url
-          # TODO: Only accept certain file types
           if !mimeType
             # Mime type will be empty if it cannot be identified
-            # TODO: Handle error here: Mime type could not be identified
-            return callback()
+            if _this.strict
+              # Throw error in strict mode
+              return callback(new Error("Mime type of resource #{url} could not be identified"))
+            else
+              # when not in strict mode: ignore error and remove domNode
+              element.parentNode.removeChild element
+              return callback()
 
           # Create file hash
           spark = new SparkMD5.ArrayBuffer
@@ -207,8 +212,14 @@ class htmlEnmlConverter
             resource: resource
           callback()
         else
-          # TODO: Handle case when resource not found here
-          callback()
+          # Handle case when resource not found here
+          if _this.strict
+            # Throw error in strict mode
+            callback(new Error("Resource #{url} not found (#{@status})"))
+          else
+            # Remove element otherwise
+            element.parentNode.removeChild element
+            callback()
     xhr.open 'GET', url
     xhr.send()
 

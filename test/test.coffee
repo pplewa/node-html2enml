@@ -142,10 +142,73 @@ describe 'html2enml', ->
         expect(enml).to.equal(enmlExpected)
         done()
 
+    it 'discards files if resources not found and not in strict mode', (done) ->
+      fileHtml = "<!DOCTYPE html>
+                  <html>
+                  <body>
+                  <h1>A Heading</h1>
+                  <p>Some text. <img src=\"file:#{path.join __dirname, 'assets', 'testImg'}\"></p>
+                  </body>
+                  </html>"
+      html2enml.fromString fileHtml, options, (err, enml, resources) ->
+        enmlExpected = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note>
+                        <h1>A Heading</h1>
+                        <p>Some text. </p>
+                        </en-note>'
+        expect(err).to.be.null
+        expect(enml).to.equal(enmlExpected)
+        expect(resources.length).to.equal(0)
+        done()
+
+    it 'throws error if resources not found and in strict mode', (done) ->
+      fileHtml = "<!DOCTYPE html>
+                  <html>
+                  <body>
+                  <h1>A Heading</h1>
+                  <p>Some text. <img src=\"file:#{path.join __dirname, 'assets', 'testImg'}\"></p>
+                  </body>
+                  </html>"
+      html2enml.fromString fileHtml, {strict: true}, (err, enml, resources) ->
+        expect(err).to.not.be.null
+        expect(enml).to.be.undefined
+        expect(resources).to.be.undefined
+        done()
+
+    it 'discards files if resource invalid and not in strict mode', (done) ->
+      fileHtml = "<!DOCTYPE html>
+                  <html>
+                  <body>
+                  <h1>A Heading</h1>
+                  <p>Some text. <img src=\"file:#{path.join __dirname, 'assets', 'testImg.unknown'}\"></p>
+                  </body>
+                  </html>"
+      html2enml.fromString fileHtml, options, (err, enml, resources) ->
+        enmlExpected = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note>
+                        <h1>A Heading</h1>
+                        <p>Some text. </p>
+                        </en-note>'
+        expect(err).to.be.null
+        expect(enml).to.equal(enmlExpected)
+        expect(resources.length).to.equal(0)
+        done()
+
+    it 'throws error if resource invalid and in strict mode', (done) ->
+      fileHtml = "<!DOCTYPE html>
+                  <html>
+                  <body>
+                  <h1>A Heading</h1>
+                  <p>Some text. <img src=\"file:#{path.join __dirname, 'assets', 'testImg.unknown'}\"></p>
+                  </body>
+                  </html>"
+      html2enml.fromString fileHtml, {strict: true}, (err, enml, resources) ->
+        expect(err).to.not.be.null
+        expect(enml).to.be.undefined
+        expect(resources).to.be.undefined
+        done()
+
     # it 'converts HTML entities', (done) ->
     # it 'returns error in strict mode when encountering invalid HTML tags', (done) ->
     # it 'ignores invalid HTML tags when not in strict mode', (done) ->
-    # it 'returns error when encountering invalid resources', (done) ->
     # it 'discards invalied resources when not in strict mode', (done) ->
 
   describe '.fromFile()', ->
