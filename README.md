@@ -12,7 +12,7 @@ Install html2enml via npm:
 
 Call html2enml from a node.js script as follows:
 
-        var html2enml = require('html2enml');
+        var htmltoenml = require('htmltoenml');
 
         options = {
           baseUrl: 'http://www.google.com', // Base url for relative URLs,
@@ -26,7 +26,7 @@ Call html2enml from a node.js script as follows:
           includeComments: false            // Default is false
         }
 
-        html2enml.fromString(htmlString, options, function(err, enml, resources) {
+        htmltoenml.fromString(htmlString, options, function(err, enml, resources) {
           if (err) {
             // handle conversion error
             console.error(err);
@@ -36,7 +36,7 @@ Call html2enml from a node.js script as follows:
           }
         }) ;
 
-        html2enml.fromFile('path/to/your/file.html', options, function(err, enml, resources) {
+        htmltoenml.fromFile('path/to/your/file.html', options, function(err, enml, resources) {
           if (err) {
             // handle conversion error
             console.error(err);
