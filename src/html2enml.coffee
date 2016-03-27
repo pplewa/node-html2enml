@@ -134,7 +134,7 @@ class htmlEnmlConverter
             else if attributeName is 'src' and tagName is 'img'
               if @ignoreFiles
                 domNode.parentNode.removeChild domNode
-                callback()
+                return callback()
               attribute.value = @_adjustUrl attribute.value
               if !attribute.value
                 domNode.parentNode.removeChild domNode
