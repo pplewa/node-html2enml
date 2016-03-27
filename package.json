@@ -8,9 +8,6 @@
     "url": "https://github.com/grobgl/node-html2enml.git"
   },
   "main": "./lib/html2enml",
-  "bin": {
-    "html2enml": "./bin/html2enml"
-  },
   "scripts": {
     "test": "make test"
   },
