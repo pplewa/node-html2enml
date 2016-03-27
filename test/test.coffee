@@ -31,7 +31,7 @@ describe 'html2enml', ->
         expect(enml).to.equal(enmlExpected)
         done()
 
-    it 'converts relative links to absolute links', (done) ->
+    it 'converts relative URL\'s to absolute URL\'s', (done) ->
       relativeHTML = '<!DOCTYPE html>
                       <html>
                       <body>
@@ -48,7 +48,7 @@ describe 'html2enml', ->
         expect(enml).to.equal(enmlExpected)
         done()
 
-    it 'converts internal Evernote URLs', (done) ->
+    it 'converts internal Evernote URL\'s', (done) ->
       # Pseudo Evernote notebook url
       relativeHTML = '<!DOCTYPE html>
                       <html>
@@ -206,13 +206,40 @@ describe 'html2enml', ->
         expect(resources).to.be.undefined
         done()
 
-    # it 'converts HTML entities', (done) ->
-    # it 'returns error in strict mode when encountering invalid HTML tags', (done) ->
-    # it 'ignores invalid HTML tags when not in strict mode', (done) ->
-    # it 'discards invalied resources when not in strict mode', (done) ->
+    it 'discards element if encountering invalid tag when not in strict mode', (done) ->
+      # form element not permitted in ENML
+      fileHtml = "<!DOCTYPE html>
+                  <html>
+                  <body>
+                  <h1>A Heading</h1>
+                  <form>Some text.</form>
+                  </body>
+                  </html>"
+      html2enml.fromString fileHtml, options, (err, enml, resources) ->
+        enmlExpected = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note>
+                        <h1>A Heading</h1>  </en-note>'
+        expect(err).to.be.null
+        expect(enml).to.equal(enmlExpected)
+        expect(resources.length).to.equal(0)
+        done()
+
+    it 'throws error if encountering invalid tag in strict mode', (done) ->
+      # form element not permitted in ENML
+      fileHtml = "<!DOCTYPE html>
+                  <html>
+                  <body>
+                  <h1>A Heading</h1>
+                  <form>Some text.</form>
+                  </body>
+                  </html>"
+      html2enml.fromString fileHtml, {strict: true}, (err, enml, resources) ->
+        expect(err).to.not.be.null
+        expect(enml).to.be.undefined
+        expect(resources).to.be.undefined
+        done()
 
   describe '.fromFile()', ->
-    it 'should convert file at given path', (done) ->
+    it 'converts file at given path', (done) ->
       filepath = path.join __dirname, 'assets', 'testHtml.html'
       html2enml.fromFile filepath, options, (err, enml) ->
         enmlExpected = """<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note>

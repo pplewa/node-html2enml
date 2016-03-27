@@ -113,7 +113,7 @@ class htmlEnmlConverter
     if tagName not in PERMITTED_ELEMENTS
       # Discard element if not permitted in ENML
       domNode.parentNode.removeChild domNode
-      err = if @strict then new Error('Illegal element.') else null
+      err = if @strict then new Error("Illegal element (#{tagName})") else null
       return callback(err)
 
     async.parallel [
