@@ -2,7 +2,7 @@
   "author": "Georg Lukas Grob, pplewa, mahadevan k",
   "name": "htmltoenml",
   "description": "HTML to ENML (Evernote Markup Language) convertor for Node.JS",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "license": "GPLv3",
   "repository": {
     "url": "https://github.com/grobgl/node-html2enml.git"
