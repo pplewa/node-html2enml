@@ -13,7 +13,8 @@ String::startsWithAny ?= (s) ->
   (return true if @startsWith x) for x in s
   return false
 
-NOTE_HEADER = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
+NOTE_HEADER = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM
+               "http://xml.evernote.com/pub/enml2.dtd">'
 
 PERMITTED_ELEMENTS = [
   'a', 'abbr', 'acronym', 'address', 'area', 'b', 'bdo', 'big', 'blockquote',
@@ -177,7 +178,8 @@ class htmlEnmlConverter
             # Mime type will be empty if it cannot be identified
             if _this.strict
               # Throw error in strict mode
-              return callback(new Error("Mime type of resource #{url} could not be identified"))
+              return callback(new Error("Mime type of resource #{url}
+                                         could not be identified"))
             else
               # when not in strict mode: ignore error and remove domNode
               element.parentNode.removeChild element
