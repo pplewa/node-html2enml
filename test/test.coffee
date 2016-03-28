@@ -238,6 +238,18 @@ describe 'html2enml', ->
         expect(resources).to.be.undefined
         done()
 
+    it 'throws error if HTML lacks body element', (done) ->
+      fileHtml = "<!DOCTYPE html>
+                  <html>
+                  <h1>A Heading</h1>
+                  <p>Some text. <img src=\"file:#{path.join __dirname, 'assets', 'testImg'}\"></p>
+                  </html>"
+      html2enml.fromString fileHtml, {strict: true}, (err, enml, resources) ->
+        expect(err).to.not.be.null
+        expect(enml).to.be.undefined
+        expect(resources).to.be.undefined
+        done()
+
   describe '.fromFile()', ->
     it 'converts file at given path', (done) ->
       filepath = path.join __dirname, 'assets', 'testHtml.html'

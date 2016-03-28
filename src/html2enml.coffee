@@ -61,12 +61,15 @@ class htmlEnmlConverter
 
   convert: (htmlString, callback) ->
     doc = @parser.parseFromString(htmlString, 'text/html')
-    doc = doc.getElementsByTagName('body')[0]
-    # TODO: handle case when body not found
-    @_convertBody doc, (err) =>
+    body = doc.getElementsByTagName('body')
+    if !body.length
+      return callback(new Error "Body element not found")
+    else
+      body = body[0]
+    @_convertBody body, (err) =>
       if err
         return callback err
-      enml = NOTE_HEADER + @serializer.serializeToString doc
+      enml = NOTE_HEADER + @serializer.serializeToString body
       resources = @resources.map (e) ->
         e.resource
 
