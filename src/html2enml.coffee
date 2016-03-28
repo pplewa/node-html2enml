@@ -62,6 +62,7 @@ class htmlEnmlConverter
   convert: (htmlString, callback) ->
     doc = @parser.parseFromString(htmlString, 'text/html')
     doc = doc.getElementsByTagName('body')[0]
+    # TODO: handle case when body not found
     @_convertBody doc, (err) =>
       if err
         return callback err
@@ -73,25 +74,21 @@ class htmlEnmlConverter
 
   _convertBody: (domNode, callback) ->
     domNode.tagName = 'en-note'
-
     async.series [
       (callback) =>
         async.each domNode.attributes, (attribute, callback) =>
-            attributeName = attribute.name.toLowerCase()
-            if attributeName in PROHIBITED_ATTR
-              # Discard attribute since not allowed in ENML
-              domNode.attributes.removeNamedItem attribute.name
-              callback()
-          , callback
+          attributeName = attribute.name.toLowerCase()
+          if attributeName in PROHIBITED_ATTR
+            # Discard attribute since not allowed in ENML
+            domNode.attributes.removeNamedItem attribute.name
+          callback()
+        , callback
       (callback) =>
         # Handle element children
-        async.each domNode.childNodes, (childNode, callback) =>
-            # Recursively convert children
-            @_convertNode childNode, callback
-          , callback
+        async.each domNode.childNodes, @_convertNode, callback
     ], callback
 
-  _convertNode: (domNode, callback) ->
+  _convertNode: (domNode, callback) =>
     # We only need to process element nodes:
     # unless domNode.nodeType is ELEMENT_NODE
     #   return callback()
@@ -147,10 +144,7 @@ class htmlEnmlConverter
           , callback
       (callback) =>
         # Handle element children
-        async.each domNode.childNodes, (childNode, callback) =>
-            # Recursively convert children
-            @_convertNode childNode, callback
-          , callback
+        async.each domNode.childNodes, @_convertNode, callback
       ], callback
 
   _convertMedia: (element, url, callback) ->
