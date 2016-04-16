@@ -23,7 +23,10 @@ Call htmltoenml from a node.js script as follows:
                                             //     When strict is set to false,
                                             //     it discards invalid elements.
                                             //     Default is false.
-          includeComments: false            // Default is false
+          includeComments: false,           // Default is false
+          ignoreFiles: false                // If ignoreFiles flag is set, files
+                                            //      are not converted to Evernote
+                                            //      resources. Default is false.
         }
 
         htmltoenml.fromString(htmlString, options, function(err, enml, resources) {
