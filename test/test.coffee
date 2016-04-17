@@ -250,6 +250,18 @@ describe 'html2enml', ->
         expect(resources).to.be.undefined
         done()
 
+    it 'throws error if HTML cannot be parsed', (done) ->
+      fileHtml = "<!DOCTYPE html>
+                  <html>
+                  <h1 att=3D\"att\">A Heading</h1>
+                  <p>Some text.</p>
+                  </html>"
+      html2enml.fromString fileHtml, {strict: true}, (err, enml, resources) ->
+        expect(err).to.not.be.null
+        expect(enml).to.be.undefined
+        expect(resources).to.be.undefined
+        done()
+
   describe '.fromFile()', ->
     it 'converts file at given path', (done) ->
       filepath = path.join __dirname, 'assets', 'testHtml.html'

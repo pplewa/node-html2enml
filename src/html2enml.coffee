@@ -57,12 +57,22 @@ class htmlEnmlConverter
     @includeComments = options.includeComments or false
     @ignoreFiles = options.ignoreFiles or false
     @resources = []
+    @warnings = []
+    @errors = []
+    @fatalErrors = []
     @parser = new DOMParser
+      errorHandler:
+        warning: (mess) => @warnings.push mess
+        error: (mess) => @errors.push mess
+        fatalError: (mess) => @fatalErrors.push mess
     @serializer = new XMLSerializer
 
   convert: (htmlString, callback) ->
-    doc = @parser.parseFromString(htmlString, 'text/html')
-    body = doc.getElementsByTagName('body')
+    doc = @parser.parseFromString htmlString, 'text/html'
+    if @fatalErrors.length
+      # Catching non-recoverable errors
+      return callback(new Error @fatalErrors)
+    body = doc.getElementsByTagName 'body'
     if !body.length
       return callback(new Error "Body element not found")
     else
