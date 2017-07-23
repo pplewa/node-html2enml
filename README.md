@@ -1,39 +1,57 @@
-# node-html2enml #
+# node-htmltoenml #
 
-node-html2enml is a node.js module to convert HTML to Evernote ENML.
+node-htmltoenml is a node.js module to convert HTML to ENML (Evernote Markup Language).
 
-Unlike other implementations, html2enml parses the DOM tree of the HTML document and converts it to valid ENML, which results in a robust and reliable conversion
+Unlike other implementations, htmltoenml parses the DOM tree of the HTML document and converts it to valid ENML, which results in a robust and reliable conversion
 
 ## Usage ##
 
-Install html2enml via npm:
+Install htmltoenml via npm:
 
-        npm install html2enml
+        npm install htmltoenml
 
-Call html2enml from a node.js script as follows:
+Call htmltoenml from a node.js script as follows:
 
-        var html2enml=require('html2enml').convert ;
-        // the htmldata variable should contain HTML string
-        // base_uri contains uri to be prepended to convert relative URLs to absolute URLs
-        // base_uri can be an empty string if base url is unknown
-        html2enml(htmldata, base_uri, function(enml) {
-          // successful conversion, enml argument contains valid enml
-          // call Evernote API to add note
-        }, function(enml) {
-          // failure, enml variable contains xml with parsererror nodes
-          // inform user
+        var htmltoenml = require('htmltoenml');
+
+        options = {
+          baseUrl: 'http://www.google.com', // Base url for relative URLs,
+                                            //     default is ''.
+          strict: true,                     // In strict mode, converter returns
+                                            //     error when encountering invalid
+                                            //     resources or invalid HTML tags.
+                                            //     When strict is set to false,
+                                            //     it discards invalid elements.
+                                            //     Default is false.
+          includeComments: false,           // Default is false
+          ignoreFiles: false                // If ignoreFiles flag is set, files
+                                            //      are not converted to Evernote
+                                            //      resources. Default is false.
+        }
+
+        htmltoenml.fromString(htmlString, options, function(err, enml, resources) {
+          if (err) {
+            // handle conversion error
+            console.error(err);
+          } else {
+            // Your ENML string:
+            console.log(enml, resources);
+          }
         }) ;
 
+        htmltoenml.fromFile('path/to/your/file.html', options, function(err, enml, resources) {
+          if (err) {
+            // handle conversion error
+            console.error(err);
+          } else {
+            // Your ENML string:
+            console.log(enml, resources);
+          }
+        }) ;
 
-For testing, you can use the command-line tool:
-
-        html2enml <html-file>
-
-The package contains example HTML files in the 'testfiles' directory.
-        
 ## Features ##
 
-- en-media tag support, with download and calculation of MD5 Hash(hash attribute) and mime-type(type attribute) 
+- en-media tag support, with download and calculation of MD5 Hash(hash attribute) and mime-type(type attribute)
 - validates converted ENML against ENML DTD
 - case-insensitive tag and attribute conversions
 - DOM based tag scanning and replacement
@@ -41,10 +59,3 @@ The package contains example HTML files in the 'testfiles' directory.
 ## License ##
 
 GPLv3
-
-## Known Issues ##
-
-The logic of HTML 2 ENML conversion is rock-solid and compliant with the ENML standards,
-but testing has been done on only a few documents.
-
-If you have issues with conversions, please bring it to my notice.
