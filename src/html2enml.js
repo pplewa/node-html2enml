@@ -1,11 +1,40 @@
 const fs = require('fs')
+const path = require('path')
 const async = require('async')
 const mime = require('mime')
-const fetch = require('node-fetch')
+const nodeFetch = require('node-fetch')
 const fileType = require('file-type')
 const SparkMD5 = require('spark-md5')
 let { DOMParser, NodeType, XMLSerializer } = require('xmldom')
 const Evernote = require('evernote')
+
+const fetch = function(url, options) {
+	const Request = nodeFetch.Request
+	const Response = nodeFetch.Response
+	const request = new Request(url, options)
+	if (request.url.substring(0, 5) === 'file:') {
+		return new Promise((resolve, reject) => {
+			const filePath = path.normalize(url.substring('file:///'.length))
+			if (!fs.existsSync(filePath)) {
+				reject(`File not found: ${filePath}`)
+			}
+			const readStream = fs.createReadStream(filePath)
+			readStream.on('open', function() {
+				resolve(
+					new Response(readStream, {
+						url: request.url,
+						status: 200,
+						statusText: 'OK',
+						size: fs.statSync(filePath).size,
+						timeout: request.timeout
+					})
+				)
+			})
+		})
+	} else {
+		return nodeFetch(url, options)
+	}
+}
 
 mime.default_type = ''
 
@@ -33,6 +62,7 @@ const PERMITTED_ELEMENTS = [
 	'a',
 	'abbr',
 	'acronym',
+	'en-todo',
 	'address',
 	'area',
 	'b',
@@ -275,6 +305,26 @@ class htmlEnmlConverter {
 		)
 	}
 
+	_createResource(url, arrayBuffer, resource, element, mime) {
+		const spark = new SparkMD5.ArrayBuffer()
+		spark.append(arrayBuffer)
+		const hash = spark.end()
+
+		// Create new Evernote resource
+		resource = Evernote.Types.Resource({ mime })
+		resource.data = Evernote.Types.Data()
+		resource.data.body = arrayBuffer
+		resource.data.bodyHash = hash
+
+		// Prepare ENML element
+		element.tagName = 'en-media'
+		element.setAttribute('hash', hash)
+		element.setAttribute('type', mime)
+		element.removeAttribute('src')
+
+		return { url, hash, mime, resource }
+	}
+
 	_convertMedia(element, url, callback) {
 		// Test if resource already loaded
 		let resource = this.resources.find(resource => resource.url === url)
@@ -288,7 +338,6 @@ class htmlEnmlConverter {
 			return callback()
 		}
 
-		// Resource not present: Send new request
 		const _this = this
 		return fetch(url)
 			.then(r => r.buffer())
@@ -308,32 +357,10 @@ class htmlEnmlConverter {
 					}
 				}
 
-				// Create file hash
-				const spark = new SparkMD5.ArrayBuffer()
-				spark.append(buffer)
-				const hash = spark.end()
-
-				// Create new Evernote resource
-				resource = Evernote.Types.Resource({
-					mime: mimeType
-				})
-				resource.data = Evernote.Types.Data()
-				resource.data.body = buffer
-				resource.data.bodyHash = hash
-
-				// Prepare ENML element
-				element.tagName = 'en-media'
-				element.setAttribute('hash', hash)
-				element.setAttribute('type', mimeType)
-				element.removeAttribute('src')
-
 				// Add resource to resource lookup table
-				_this.resources.push({
-					url,
-					hash,
-					mime: mimeType,
-					resource
-				})
+				this.resources.push(
+					this._createResource(url, buffer, resource, element, mimeType)
+				)
 				return callback()
 			})
 			.catch(e => {

@@ -73,7 +73,7 @@ describe('html2enml', function() {
 			})
 		})
 
-		it('converts files to ENML resouces', function(done) {
+		it.skip('converts files to ENML resouces', function(done) {
 			const fileHtml = `<!DOCTYPE html> \
 <html> \
 <body> \
