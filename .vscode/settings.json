@@ -1,0 +1,9 @@
+{
+	"prettier.useTabs": true,
+	"prettier.singleQuote": true,
+	"prettier.semi": false,
+	"[javascript]": {
+		"editor.formatOnSave": true
+	},
+	"editor.formatOnPaste": false
+}
