@@ -25,7 +25,7 @@ describe('html2enml', function() {
 </body> \
 </html>`
 			return html2enml.fromString(plainHTML, options, function(err, enml) {
-				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml"> \
+				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note> \
 <h1>A Heading</h1> \
 <p>Some text. <a href="http://www.google.com">And a link.</a></p> \
 </en-note>`
@@ -44,7 +44,7 @@ describe('html2enml', function() {
 </body> \
 </html>`
 			return html2enml.fromString(relativeHTML, options, function(err, enml) {
-				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml"> \
+				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note> \
 <h1>A Heading</h1> \
 <p>Some text. <a href="http://www.google.com/resource">And a link.</a></p> \
 </en-note>`
@@ -64,7 +64,7 @@ describe('html2enml', function() {
 </body> \
 </html>`
 			return html2enml.fromString(relativeHTML, options, function(err, enml) {
-				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml"> \
+				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note> \
 <h1>A Heading</h1> <p>Some text. <a href="evernote:///view/2127483637/s161/01344ac2-be5a-454b-8e01-a0b487cda7e4/01344ac2-be5a-454b-8e01-a0c987cda7e4/">And a link.</a></p> \
 </en-note>`
 				expect(err).to.be.null
@@ -90,7 +90,7 @@ describe('html2enml', function() {
 				enml,
 				resources
 			) {
-				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml"> \
+				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note> \
 <h1>A Heading</h1> \
 <p>Some text. <en-media hash="d0ad09ba8fe3801ac437d06ba62740d2" type="image/png"></en-media></p> \
 </en-note>`
@@ -121,7 +121,7 @@ describe('html2enml', function() {
 				enml,
 				resources
 			) {
-				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml"> \
+				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note> \
 <h1>A Heading</h1> \
 <p>Some text. </p> \
 </en-note>`
@@ -142,7 +142,7 @@ describe('html2enml', function() {
 </body> \
 </html>`
 			return html2enml.fromString(commentedHTML, options, function(err, enml) {
-				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml"> \
+				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note> \
 <h1>A Heading</h1> \
 <p>Some text. <a href="evernote:///view/2127483637/s161/01344ac2-be5a-454b-8e01-a0b487cda7e4/01344ac2-be5a-454b-8e01-a0c987cda7e4/">And a link.</a></p> \
 </en-note>`
@@ -166,7 +166,7 @@ describe('html2enml', function() {
 				commentedHTML,
 				{ includeComments: true },
 				function(err, enml) {
-					const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml"> \
+					const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note> \
 <h1>A Heading</h1> \
 <p>Some text. <a href="evernote:///view/2127483637/s161/01344ac2-be5a-454b-8e01-a0b487cda7e4/01344ac2-be5a-454b-8e01-a0c987cda7e4/">And a link.</a></p> \
 <!--This is a comment.--> \
@@ -195,7 +195,7 @@ describe('html2enml', function() {
 				enml,
 				resources
 			) {
-				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml"> \
+				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note> \
 <h1>A Heading</h1> \
 <p>Some text. </p> \
 </en-note>`
@@ -247,7 +247,7 @@ describe('html2enml', function() {
 				enml,
 				resources
 			) {
-				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml"> \
+				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note> \
 <h1>A Heading</h1> \
 <p>Some text. </p> \
 </en-note>`
@@ -296,7 +296,7 @@ describe('html2enml', function() {
 				enml,
 				resources
 			) {
-				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml"> \
+				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note> \
 <h1>A Heading</h1>  </en-note>`
 				expect(err).to.be.null
 				expect(enml).to.equal(enmlExpected)
@@ -371,7 +371,7 @@ describe('html2enml', function() {
 		it('converts file at given path', function(done) {
 			const filepath = path.join(__dirname, 'assets', 'testHtml.html')
 			return html2enml.fromFile(filepath, options, function(err, enml) {
-				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note xmlns="http://www.w3.org/1999/xhtml">
+				const enmlExpected = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note>
 <h1>A Heading</h1>
 <p>Some text. <a href="http://www.google.com">And a link.</a></p>
 </en-note>`

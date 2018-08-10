@@ -158,7 +158,11 @@ class htmlEnmlConverter {
 			if (err) {
 				return callback(err)
 			}
-			const enml = NOTE_HEADER + this.serializer.serializeToString(body)
+			const enml =
+				NOTE_HEADER +
+				this.serializer
+					.serializeToString(body)
+					.replace(' xmlns="http://www.w3.org/1999/xhtml"', '')
 			const resources = this.resources.map(e => e.resource)
 
 			return callback(null, enml, resources)
@@ -319,7 +323,7 @@ class htmlEnmlConverter {
 						mime: mimeType
 					})
 					resource.data = Evernote.Types.Data()
-					resource.data.body = _this._toBuffer(this.responseText)
+					resource.data.body = new Buffer(this.responseText, 'binary')
 					resource.data.bodyHash = hash
 
 					// Prepare ENML element
@@ -353,16 +357,6 @@ class htmlEnmlConverter {
 		}
 		xhr.open('GET', url)
 		return xhr.send()
-	}
-
-	_toBuffer(arrayBuff) {
-		console.log(arrayBuff)
-		const buf = new Buffer(arrayBuff.byteLength)
-		const view = new Uint8Array(arrayBuff)
-		for (var i = 0; i < buf.length; ++i) {
-			buf[i] = view[i]
-		}
-		return buf
 	}
 
 	_adjustUrl(relative) {
