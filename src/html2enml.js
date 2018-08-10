@@ -1,11 +1,13 @@
 const fs = require('fs')
 const async = require('async')
 const mime = require('mime')
-mime.default_type = ''
-const { XMLHttpRequest } = require('xmlhttprequest')
+const fetch = require('node-fetch')
+const fileType = require('file-type')
 const SparkMD5 = require('spark-md5')
 let { DOMParser, NodeType, XMLSerializer } = require('xmldom')
 const Evernote = require('evernote')
+
+mime.default_type = ''
 
 // Helper to check the head of our URL strings
 if (String.prototype.startsWith == null) {
@@ -287,76 +289,64 @@ class htmlEnmlConverter {
 		}
 
 		// Resource not present: Send new request
-		const xhr = new XMLHttpRequest()
-		xhr.element = element
-		xhr.responseType = 'arraybuffer'
 		const _this = this
-		xhr.onreadystatechange = function() {
-			if (this.readyState === 4) {
-				if (this.status === 200) {
-					// Identify mime type
-					const mimeType =
-						this.getResponseHeader('content-type') || mime.lookup(url)
-					if (!mimeType) {
-						// Mime type will be empty if it cannot be identified
-						if (_this.strict) {
-							// Throw error in strict mode
-							return callback(
-								new Error(
-									`Mime type of resource ${url} could not be identified`
-								)
-							)
-						} else {
-							// when not in strict mode: ignore error and remove domNode
-							element.parentNode.removeChild(element)
-							return callback()
-						}
-					}
-
-					// Create file hash
-					const spark = new SparkMD5.ArrayBuffer()
-					spark.append(this.responseText)
-					const hash = spark.end()
-
-					// Create new Evernote resource
-					resource = Evernote.Types.Resource({
-						mime: mimeType
-					})
-					resource.data = Evernote.Types.Data()
-					resource.data.body = new Buffer(this.responseText, 'binary')
-					resource.data.bodyHash = hash
-
-					// Prepare ENML element
-					this.element.tagName = 'en-media'
-					this.element.setAttribute('hash', hash)
-					this.element.setAttribute('type', mimeType)
-					this.element.removeAttribute('src')
-
-					// Add resource to resource lookup table
-					_this.resources.push({
-						url,
-						hash,
-						mime: mimeType,
-						resource
-					})
-					return callback()
-				} else {
-					// Handle case when resource not found here
+		return fetch(url)
+			.then(r => r.buffer())
+			.then(buffer => {
+				const mimeType = fileType(buffer).mime || mime.lookup(url)
+				if (!mimeType) {
+					// Mime type will be empty if it cannot be identified
 					if (_this.strict) {
 						// Throw error in strict mode
 						return callback(
-							new Error(`Resource ${url} not found (${this.status})`)
+							new Error(`Mime type of resource ${url} could not be identified`)
 						)
 					} else {
-						// Remove element otherwise
+						// when not in strict mode: ignore error and remove domNode
 						element.parentNode.removeChild(element)
 						return callback()
 					}
 				}
-			}
-		}
-		xhr.open('GET', url)
-		return xhr.send()
+
+				// Create file hash
+				const spark = new SparkMD5.ArrayBuffer()
+				spark.append(buffer)
+				const hash = spark.end()
+
+				// Create new Evernote resource
+				resource = Evernote.Types.Resource({
+					mime: mimeType
+				})
+				resource.data = Evernote.Types.Data()
+				resource.data.body = buffer
+				resource.data.bodyHash = hash
+
+				// Prepare ENML element
+				element.tagName = 'en-media'
+				element.setAttribute('hash', hash)
+				element.setAttribute('type', mimeType)
+				element.removeAttribute('src')
+
+				// Add resource to resource lookup table
+				_this.resources.push({
+					url,
+					hash,
+					mime: mimeType,
+					resource
+				})
+				return callback()
+			})
+			.catch(e => {
+				// Handle case when resource not found here
+				if (_this.strict) {
+					// Throw error in strict mode
+					return callback(new Error(`Resource ${url} not found`))
+				} else {
+					// Remove element otherwise
+					element.parentNode.removeChild(element)
+					return callback()
+				}
+			})
 	}
 
 	_adjustUrl(relative) {

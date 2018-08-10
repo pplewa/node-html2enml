@@ -11,7 +11,7 @@ describe('html2enml', function() {
 			mime: 'image/png',
 			data: {
 				bodyHash: 'd0ad09ba8fe3801ac437d06ba62740d2',
-				_body:
+				body:
 					'�PNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000 \u0000\u0000\u0000 \u0002\u0003\u0000\u0000\u0000\u000e\u0014�g\u0000\u0000\u0000\u0004gAMA\u0000\u0001��1��_\u0000\u0000\u0000\u0003sBIT\u0001\u0001\u0001|.w�\u0000\u0000\u0000\fPLTE\u0000�\u0000�\u0000\u0000��\u0000\u0000\u0000�e?+�\u0000\u0000\u0000"IDATx�c�\u001f��\u0001�\u0019�0���\u0018��,|\f����\u0018��=\u0000�I�ꉎ\u001b\u0000\u0000\u0000\u0000IEND�B`�'
 			}
 		}
@@ -98,7 +98,9 @@ describe('html2enml', function() {
 				expect(enml).to.equal(enmlExpected)
 				expect(resources.length).to.equal(1)
 				expect(resources[0].data.bodyHash).to.equal(resource.data.bodyHash)
-				expect(resources[0].data._body).to.equal(resource.data.body)
+				expect(resources[0].data.body).to.equal(
+					new Buffer(resource.data.body, 'binary')
+				)
 				expect(resources[0].mime).to.equal(resource.mime)
 				return done()
 			})
